@@ -48,9 +48,7 @@ spec:
           exporters:
             - debug
           processors:
-            - transform/prepare_sampling
             - probabilistic_sampler
-            - transform/cleanup_sampling
           receivers:
             - otlp
       telemetry:
