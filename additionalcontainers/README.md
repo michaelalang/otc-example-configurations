@@ -43,6 +43,16 @@ Expected output
 {"partialSuccess":{}}
 ```
 
+**NOTE** additionally you can change which Container is access by default when using the UI or cli with
+
+```
+spec:
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: "otc-container" # or "debug"
+```
+
+in the OTC CR.
+
 # clean up
 
 ```
