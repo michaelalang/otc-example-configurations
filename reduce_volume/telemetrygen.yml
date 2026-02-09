@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: telemetrygen
+  name: telemetrygen
+  namespace: otcreducevolume
+spec:
+  containers:
+    - args:
+        - logs 
+        - --otlp-endpoint 
+        - otc-collector:4317
+        - --logs 
+        - "8" 
+        - --body 
+        - "Hello World" 
+        - --otlp-insecure
+      image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
+      imagePullPolicy: IfNotPresent
+      name: logs
+    - args:
+        - traces
+        - --otlp-endpoint
+        - otc-collector:4317
+        - --traces
+        - "8"
+        - --otlp-insecure
+      image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
+      imagePullPolicy: IfNotPresent
+      name: traces
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: default-scheduler
+  terminationGracePeriodSeconds: 30

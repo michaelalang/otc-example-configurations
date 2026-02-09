@@ -1,0 +1,91 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otc
+  namespace: otcreducevolume
+spec:
+  config:
+    exporters:
+      debug:
+        sampling_initial: 5
+        sampling_thereafter: 200
+        verbosity: detailed
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+    processors:
+      probabilistic_sampler:
+        attribute_source: record
+        from_attribute: sampling_key
+        sampling_percentage: 25
+      transform/prepare_sampling:
+        error_mode: ignore
+        log_statements:
+        - context: log
+          statements:
+          - set(log.attributes["sampling_key"], Concat([Int(log.time_unix_nano)],
+            ""))
+      transform/cleanup_sampling:
+        error_mode: ignore
+        log_statements:
+        - context: log
+          statements:
+          - delete_key(log.attributes, "sampling_key")
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - debug
+          processors:
+            - transform/prepare_sampling
+            - probabilistic_sampler
+            - transform/cleanup_sampling
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - debug
+          processors:
+            - transform/prepare_sampling
+            - probabilistic_sampler
+            - transform/cleanup_sampling
+          receivers:
+            - otlp
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 1
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: deployment
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  targetAllocator:
+    allocationStrategy: consistent-hashing
+    collectorNotReadyGracePeriod: 30s
+    collectorTargetReloadInterval: 30s
+    filterStrategy: relabel-config
+    observability:
+      metrics: {}
+    prometheusCR:
+      scrapeInterval: 30s
+    resources: {}
+  upgradeStrategy: automatic
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: otc-container
