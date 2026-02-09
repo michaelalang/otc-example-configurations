@@ -43,13 +43,6 @@ spec:
           - /host/var/log/openshift-apiserver/audit.log
           - /host/var/log/kube-apiserver/audit.log
         start_at: beginning
-      prometheus/loopback:
-        config:
-          scrape_configs:
-            - job_name: 'otel-self-scrape'
-              scrape_interval: 10s
-              static_configs:
-                - targets: ['127.0.0.1:8889']
 
     processors:
       batch: {}
@@ -81,9 +74,18 @@ spec:
           - context: metric
             statements:
               - set(metric.name, "k8s_resource_flapping") where metric.name == "log.record.count"
-              - set(resource.attributes["job"], "${JOB}") 
+              - set(resource.attributes["job"], "${JOB}")
               - set(resource.attributes["cluster"], "${CLUSTERNAME}")
-
+              - set(resource.attributes["openshift_cluster_name"], "${CLUSTERNAME}")
+              - set(datapoint.attributes["resource_name"], "n/a")
+              - set(datapoint.attributes["resource_type"], "n/a")
+              - set(datapoint.attributes["source_user"], "n/a")
+              - set(datapoint.attributes["verb"], "n/a"
+              - set(datapoint.attributes["resource_name"], resource.attributes["resource_name"]) where resource.attributes["resource_name"] != nil
+              - set(datapoint.attributes["resource_type"], resource.attributes["resource_type"]) where resource.attributes["resource_type"] != nil
+              - set(datapoint.attributes["source_user"], resource.attributes["source_user"]) where resource.attributes["source_user"] != nil
+              - set(datapoint.attributes["verb"], resource.attributes["verb"]) where resource.attributes["verb"] != nil
+              - set(datapoint.attributes["target_resource"], resource.attributes["objectRef.resource"]) where resource.attributes["objectRef.resource"] != nil
     connectors:
       count/flapping:
         metrics:
@@ -99,8 +101,8 @@ spec:
         endpoint: 0.0.0.0:8889
         resource_to_telemetry_conversion:
           enabled: true
-      prometheusremotewrite:
-        endpoint: 'https://prometheus.apps.example.com/api/v1/write'
+      otlphttp/prometheusremotewrite:
+        endpoint: 'https://prometheus.apps.example.com/api/v1/otlp'
         tls:
           insecure_skip_verify: true
         timeout: 120s
@@ -109,11 +111,6 @@ spec:
           initial_interval: 60s
           max_elapsed_time: 600s
           max_interval: 120s
-        target_info:
-          enabled: true
-        external_labels:
-          openshift_cluster_name: ${CLUSTERNAME}
-          cluster: ${CLUSTERNAME}
         resource_to_telemetry_conversion:
           enabled: true
 
@@ -134,14 +131,7 @@ spec:
             - batch
             - transform/rename_metric
           exporters: 
-            - prometheus
-        metrics/loopback:
-          receivers:
-            - prometheus/loopback
-          processors:
-            - batch
-          exporters:
-            - prometheusremotewrite
+            - otlphttp/prometheusremotewrite
       telemetry:
         logs:
           level: info

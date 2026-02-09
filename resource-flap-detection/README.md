@@ -18,8 +18,6 @@ The goal is to read the audit logs from the kube-apiserver and openshift-apiserv
 
 * Cluster Administrative rights
 
-** NOTE ** since we will be using the Red Hat build of OpenTelemetry image, we need to utilize the prometheus self-scrape version instead of using the `deltatocumulative` processor which is not included in the Red Hat supported image at the moment of writing. 
-
 ## deployment process
 
 Since we need the permissions in place before the OpenTelemetryCollector should start and we are not using a wave based CI/CD system we first create those resources
@@ -29,7 +27,7 @@ oc create -k resource-flap-detection
 ```
 
 Second we are going to deploy the OpenTelemetryCollector
-** NOTE ** ensure to point the `prometheusremotewriter` exporter to a valid Prometheus instance accepting remote writes.
+** NOTE ** ensure to point the `prometheusremotewriter` exporter to a valid Prometheus instance accepting remote writes on `/api/v1/otlp`.
 
 ```
 oc create -f resource-flap-detection/otc.yml
