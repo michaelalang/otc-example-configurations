@@ -1,0 +1,107 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel-client
+  namespace: otccerts
+spec:
+  additionalContainers:
+    - args:
+        - trap "exit 0" SIGTERM SIGINT; while true; do sleep 10 & wait $!; done
+      command:
+        - /bin/sh
+        - -c
+      image: quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:9bd872f8adc3138f7c3bd8267aa1a8ecb5cd2e7f3385b8434a684cfd52093909
+      name: debug
+      resources: {}
+      volumeMounts:
+        - mountPath: /etc/certs/client
+          name: client-certs
+          readOnly: true
+  config:
+    exporters:
+      otlp:
+        endpoint: otel-server-collector.otccerts.svc.cluster.local:4317
+        tls:
+          ca_file: /etc/certs/client/ca.crt
+          cert_file: /etc/certs/client/tls.crt
+          insecure: false
+          key_file: /etc/certs/client/tls.key
+          max_version: '1.3'
+          min_version: '1.3'
+      otlphttp:
+        endpoint: https://otel-server-collector.otccerts.svc.cluster.local:4318
+        tls:
+          ca_file: /etc/certs/client/ca.crt
+          cert_file: /etc/certs/client/tls.crt
+          insecure: false
+          key_file: /etc/certs/client/tls.key
+          max_version: '1.3'
+          min_version: '1.3'
+    receivers:
+      filelog:
+        include:
+          - /tmp/debug
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - otlp
+            - otlphttp
+          receivers:
+            - filelog
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 3
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: deployment
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  targetAllocator:
+    allocationStrategy: consistent-hashing
+    collectorNotReadyGracePeriod: 30s
+    collectorTargetReloadInterval: 30s
+    filterStrategy: relabel-config
+    observability:
+      metrics: {}
+    prometheusCR:
+      scrapeInterval: 30s
+    resources: {}
+  upgradeStrategy: automatic
+  volumeMounts:
+    - mountPath: /etc/certs/client
+      name: client-certs
+      readOnly: true
+    - mountPath: /tmp
+      name: tmp
+  volumes:
+    - emptyDir: {}
+      name: tmp
+    - name: client-certs
+      secret:
+        defaultMode: 256
+        items:
+          - key: ca.crt
+            path: ca.crt
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+        secretName: otc-client
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: otc-container

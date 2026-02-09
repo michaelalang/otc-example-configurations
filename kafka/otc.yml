@@ -1,0 +1,93 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: kafka
+  namespace: otckafka
+spec:
+  config:
+    exporters:
+      debug:
+        sampling_initial: 5
+        sampling_thereafter: 200
+        verbosity: detailed
+      kafka/exporter/logs2: # << produce to topic otlp_logs2
+        topic: otlp_logs2
+        encoding: raw
+        brokers:
+          - 127.0.0.1:9092
+      kafka/exporter/logs3: # << produce to topic otlp_logs3
+        topic: otlp_logs3
+        encoding: raw
+        brokers:
+          - 127.0.0.1:9092
+    receivers:
+      kafka:
+        encoding: raw
+    processors:
+      transform/kafka:
+        log_statements:
+          - context: log
+            statements:
+              - set(body, Decode(body, "utf8"))
+      transform/kafka/json:
+        log_statements:
+          - context: log
+            statements:
+              - merge_maps(attributes, ParseJSON(Decode(body, "utf8")), "upsert")
+              - flatten(cache)
+              - merge_maps(attributes, cache, "upsert")
+              - set(body, ParseJSON(Decode(body, "utf8")))
+    service:
+      pipelines:
+        logs/kafka/simple:
+          exporters:
+            - debug
+          processors:
+            - transform/kafka
+          receivers:
+            - kafka
+        logs/kafka/json:
+          receivers:
+            - kafka
+          processors: 
+            - transform/kafka/json
+          exporters: 
+            - debug
+            - kafka/exporter/logs2
+            - kafka/exporter/logs3
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 1
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: sidecar
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  targetAllocator:
+    allocationStrategy: consistent-hashing
+    collectorNotReadyGracePeriod: 30s
+    collectorTargetReloadInterval: 30s
+    filterStrategy: relabel-config
+    observability:
+      metrics: {}
+    prometheusCR:
+      scrapeInterval: 30s
+    resources: {}
+  upgradeStrategy: automatic
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: otc-container

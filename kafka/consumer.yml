@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  consumer.py: "#!/opt/app-root/bin/python\nfrom kafka import KafkaConsumer\nimport\
+    \ sys\ntry:\n    topic = sys.argv[1]\nexcept IndexError:\n    topic = 'otlp_logs2'\n\
+    consumer = KafkaConsumer(topic)\ntry:\n    for msg in consumer:\n        print\
+    \ (msg)\nexcept KeyboardInterrupt:\n    print(f\"shutting down\")"
+immutable: false
+kind: ConfigMap
+metadata:
+  name: consumer
+  namespace: otckafka

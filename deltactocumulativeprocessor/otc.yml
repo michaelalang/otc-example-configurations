@@ -1,0 +1,92 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otc
+spec:
+  config:
+    connectors:
+      count/logs:
+        metrics:
+          log.record.count:
+            description: deltactocumulativeprocessor workaround
+            monotonic: true
+            type: sum
+    exporters:
+      debug:
+        verbosity: detailed
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        resource_to_telemetry_conversion:
+          enabled: true
+    processors:
+      batch: {}
+      transform/jsonparser:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(log.body, ParseJSON(log.body)) where IsString(log.body)
+              - set(resource.attributes["must_have_1"], "1")
+              - set(resource.attributes["must_have_2"], "2")
+              - set(resource.attributes["must_have_3"], "3")
+              - set(resource.attributes["must_have_4"], "4")
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+      prometheus/loopback:
+        config:
+          scrape_configs:
+            - job_name: otel-self-scrape
+              scrape_interval: 10s
+              static_configs:
+                - targets:
+                    - 127.0.0.1:8889
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - count/logs
+          processors:
+            - transform/jsonparser
+          receivers:
+            - otlp
+        metrics:
+          exporters:
+            - prometheus
+          processors:
+            - batch
+          receivers:
+            - count/logs
+        metrics/loopback:
+          exporters:
+            - debug
+          processors:
+            - batch
+          receivers:
+            - prometheus/loopback
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 1
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: deployment
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  upgradeStrategy: automatic

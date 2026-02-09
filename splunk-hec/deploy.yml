@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations: {}
+  labels:
+    app: splunk-hec
+    app.kubernetes.io/component: splunk-hec
+  name: splunk-hec
+  namespace: otcsplunkhec
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: splunk-hec
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        sidecar.opentelemetry.io/inject: "splunk-hec"
+        openshift.io/required-scc: anyuid
+      creationTimestamp: null
+      labels:
+        app: splunk-hec
+    spec:
+      containers:
+        - name: splunk-hec
+          image: docker.io/splunk/splunk:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: SPLUNK_GENERAL_TERMS
+            value: "--accept-sgt-current-at-splunk-com"
+          - name: SPLUNK_START_ARGS
+            value: "--accept-license"
+          - name: SPLUNK_PASSWORD
+            value: "changeme"
+          - name: SPLUNK_HEC_TOKEN
+            value: "11111111-2222-3333-4444-555555555555"
+          - name: SPLUNK_HEC_PORT
+            value: "8088"
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+            - containerPort: 8088
+              protocol: TCP
+          resources:
+            limits:
+              cpu: '2'
+              memory: 10Gi
+            requests:
+              cpu: 10m
+              memory: 256Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - name: splunk
+              mountPath: /opt/container_artifact
+            - name: ansible
+              mountPath: /.ansible
+            - name: spool
+              mountPath: /opt/splunk/var
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccount: splunk-hec
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsGroup: 0
+        runAsUser: 0
+      terminationGracePeriodSeconds: 3
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: consumer
+            optional: true
+          name: consumer
+        - name: splunk
+          emptyDir: {}
+        - name: ansible
+          emptyDir: {}
+        - name: spool
+          emptyDir: {}

@@ -1,0 +1,21 @@
+apiVersion: v1
+data:
+  producer.py: "#!/opt/app-root/bin/python\nfrom faker import Faker\nimport json,\
+    \ time, os\nfrom kafka import KafkaProducer\nfactory = Faker()\nproducer = KafkaProducer(bootstrap_servers='127.0.0.1:9092')\n\
+    for _ in range(int(os.environ.get(\"COUNT\", 1))):\n    producer.send('otlp_logs',\
+    \ json.dumps({\"message\":factory.paragraph(), \n                            \
+    \               \"host\": \"oteltest\", \n                                   \
+    \        \"facility\": \"user\", \n                                          \
+    \ \"hostname\": \"oteltest\", \n                                           \"\
+    application\": \"otel-testing\", \n                                          \
+    \ \"service_name\": \"otel\", \n                                           \"\
+    service_namespace\": \"otel-test\", \n                                       \
+    \    \"timestamp\": time.time(), \n                                          \
+    \ \"level\": \"INFO\", \n                                           \"pid\": os.getpid(),\
+    \ \n                                           \"application\": __name__}).encode('utf8'))\n\
+    producer.flush()"
+immutable: false
+kind: ConfigMap
+metadata:
+  name: producer
+  namespace: otckafka

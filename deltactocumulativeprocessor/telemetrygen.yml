@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: telemetrygen
+  name: telemetrygen
+  namespace: otcworkaround
+spec:
+  containers:
+    - args:
+        - logs 
+        - --otlp-endpoint 
+        - otc-collector.otcworkaround.svc:4317
+        - --logs 
+        - "1" 
+        - --body 
+        - '{"some":"json", "data":"structure","creating":"deltactocumulative","metrics":"using","prometheus":"self-scrape"}' 
+        - --otlp-insecure
+      image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
+      imagePullPolicy: IfNotPresent
+      name: logs
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: default-scheduler
+  terminationGracePeriodSeconds: 30

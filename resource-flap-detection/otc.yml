@@ -1,0 +1,175 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: flapper
+  namespace: openshift-logging
+spec:
+  mode: deployment
+  env:
+    - name: KUBE_NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    - name: CLUSTERNAME
+      value: "mycluster"
+    - name: JOB
+      value: "k8s_resource_flapper"
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  tolerations:
+  - key: node-role.kubernetes.io/master
+    effect: NoSchedule
+    operator: Exists
+
+  serviceAccount: clfotlp
+  securityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+    readOnlyRootFilesystem: true
+    seLinuxOptions:
+      type: spc_t
+    seccompProfile:
+      type: RuntimeDefault
+
+  config:
+    receivers:
+      filelog/audit:
+        include:
+          - /host/var/log/openshift-apiserver/audit.log
+          - /host/var/log/kube-apiserver/audit.log
+        start_at: beginning
+      prometheus/loopback:
+        config:
+          scrape_configs:
+            - job_name: 'otel-self-scrape'
+              scrape_interval: 10s
+              static_configs:
+                - targets: ['127.0.0.1:8889']
+
+    processors:
+      batch: {}
+      transform/audit_parser:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(log.body, ParseJSON(log.body)) where IsString(log.body)
+              - set(resource.attributes["resource_name"], "n/a")
+              - set(resource.attributes["resource_type"], "n/a")
+              - set(resource.attributes["source_user"], "n/a")
+              - set(resource.attributes["verb"], "n/a")
+              - set(resource.attributes["resource_name"], log.body["objectRef"]["name"]) where log.body["objectRef"]["name"] != nil
+              - set(resource.attributes["resource_type"], log.body["objectRef"]["resource"]) where log.body["objectRef"]["resource"] != nil
+              - set(resource.attributes["source_user"], log.body["user"]["username"]) where log.body["user"]["username"] != nil
+              - set(resource.attributes["verb"], log.body["verb"]) where log.body["verb"] != nil
+              - set(log.attributes["target_resource"], log.body["objectRef"]["resource"]) where log.body["objectRef"]["resource"] != nil
+              - set(log.attributes["openshift_cluster_name"], "${CLUSTERNAME}")
+      filter/audit_interest:
+        error_mode: ignore
+        logs:
+          log_record:
+            - 'log.attributes["target_resource"] == nil'
+            - 'resource.attributes["verb"] != "update" and resource.attributes["verb"] != "patch"'
+      transform/rename_metric:
+        error_mode: ignore
+        metric_statements:
+          - context: metric
+            statements:
+              - set(metric.name, "k8s_resource_flapping") where metric.name == "log.record.count"
+              - set(resource.attributes["job"], "${JOB}") 
+              - set(resource.attributes["cluster"], "${CLUSTERNAME}")
+
+    connectors:
+      count/flapping:
+        metrics:
+          log.record.count:
+            description: Resource Flapping Tracker
+            monotonic: true
+            type: sum
+
+    exporters:
+      debug:
+        verbosity: detailed
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        resource_to_telemetry_conversion:
+          enabled: true
+      prometheusremotewrite:
+        endpoint: 'https://prometheus.apps.example.com/api/v1/write'
+        tls:
+          insecure_skip_verify: true
+        timeout: 120s
+        retry_on_failure:
+          enabled: true
+          initial_interval: 60s
+          max_elapsed_time: 600s
+          max_interval: 120s
+        target_info:
+          enabled: true
+        external_labels:
+          openshift_cluster_name: ${CLUSTERNAME}
+          cluster: ${CLUSTERNAME}
+        resource_to_telemetry_conversion:
+          enabled: true
+
+    service:
+      pipelines:
+        logs:
+          receivers: 
+            - filelog/audit
+          processors: 
+            - transform/audit_parser
+            - filter/audit_interest
+          exporters: 
+            - count/flapping
+        metrics:
+          receivers: 
+            - count/flapping
+          processors: 
+            - batch
+            - transform/rename_metric
+          exporters: 
+            - prometheus
+        metrics/loopback:
+          receivers:
+            - prometheus/loopback
+          processors:
+            - batch
+          exporters:
+            - prometheusremotewrite
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          readers:
+          - pull:
+              exporter:
+                prometheus:
+                  host: 0.0.0.0
+                  port: 8888
+  volumes:
+    - hostPath:
+        path: /var/log/openshift-apiserver
+      name: audit-ocp
+    - hostPath:
+        path: /var/log/kube-apiserver
+      name: audit-k8s
+    - hostPath:
+        path: /var/hpvolumes/otc-queue
+        type: DirectoryOrCreate
+      name: otel-queue
+  
+  volumeMounts:
+    - mountPath: /host/var/log/openshift-apiserver
+      name: audit-ocp
+      readOnly: true
+    - mountPath: /host/var/log/kube-apiserver
+      name: audit-k8s
+      readOnly: true
+    - mountPath: /queues
+      name: otel-queue

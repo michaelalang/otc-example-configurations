@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: logdedup
+    app.kubernetes.io/component: kafka
+  name: logdedup
+  namespace: otclogdedup
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: logdedup
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        sidecar.opentelemetry.io/inject: "telemetrygen"
+      creationTimestamp: null
+      labels:
+        app: logdedup
+    spec:
+      containers:
+        - name: sleep
+          args:
+            - trap "exit 0" SIGTERM SIGINT; while true; do sleep 10 & wait $!; done
+          command:
+            - /bin/sh
+            - -c
+          image: registry.redhat.io/ubi9/python-312@sha256:bf14f21e4e45e6c6dfe0d498090546e5e06923462a0ba5bc29e32640aeaedf36
+          imagePullPolicy: IfNotPresent
+      initContainers:
+        - name: telemetrygen
+          args:
+            - logs
+            - --duration
+            - "inf"
+            - --rate
+            - "10"
+            - --severity-text
+            - ERROR
+            - --severity-number
+            - "17"
+            - --otlp-endpoint
+            - "127.0.0.1:4317"
+            - --body
+            - "Connection refused: failed to connect to database at 10.0.0.5:5432"
+            - --otlp-insecure
+            - --allow-export-failures
+            - --workers
+            - "10"
+          image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
+          imagePullPolicy: IfNotPresent
+          restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 3

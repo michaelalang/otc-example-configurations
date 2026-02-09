@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- otcsidecar.yml
+- certificates.yml
+- deploy.yml
+- namespace.yml
+- sa.yml
+- scc-binding.yml
+- secret.yml
+- service.yml
+
+namespace: otcsplunkhec

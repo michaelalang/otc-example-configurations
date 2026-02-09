@@ -1,0 +1,67 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: otc-server
+  namespace: cert-manager-operator
+spec:
+  commonName: otc-server.apps.example.com
+  dnsNames:
+    - otc-server.apps.example.com
+    - otel-server-collector.otccerts.svc.cluster.local
+    - otel-server-collector.otccerts.svc
+  isCA: false
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: example-intermediate-central-issuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  secretName: otc-server-certificate
+  secretTemplate:
+    annotations:
+      reflector.v1.k8s.emberstack.com/reflection-allowed: 'true'
+  duration: 60m
+  renewBefore: 55m
+  subject:
+    countries:
+      - US
+    organizationalUnits:
+      - Example Lab
+    organizations:
+      - Example
+      - OTC
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: otc-client
+  namespace: cert-manager-operator
+spec:
+  commonName: otc-client.apps.example.com
+  dnsNames:
+    - otc-client.apps.example.com
+    - otel-client.otccerts.svc.cluster.local
+    - otel-client.otccerts
+  isCA: false
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: example-intermediate-central-issuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  secretName: otc-client-certificate
+  secretTemplate:
+    annotations:
+      reflector.v1.k8s.emberstack.com/reflection-allowed: 'true'
+  duration: 60m
+  renewBefore: 55m
+  subject:
+    countries:
+      - US
+    organizationalUnits:
+      - Example Lab
+    organizations:
+      - Example
+      - OTC Client

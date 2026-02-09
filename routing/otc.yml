@@ -1,0 +1,182 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otc
+  namespace: otcrouting
+spec:
+  config:
+    connectors:
+      routing/logs:
+        default_pipelines:
+        - logs/destlocal
+        error_mode: ignore
+        table:
+        - condition: resource.attributes["tenant"] == "tenant1"
+          context: log
+          pipelines:
+          - logs/dest1
+        - condition: resource.attributes["tenant"] == "tenant2"
+          context: log
+          pipelines:
+          - logs/dest2
+        - condition: resource.attributes["tenant"] == "tenant3"
+          context: log
+          pipelines:
+          - logs/dest3
+      routing/traces:
+        default_pipelines:
+        - traces/destlocal
+        error_mode: ignore
+        table:
+        - condition: resource.attributes["tenant"] == "tenant1"
+          context: span
+          pipelines:
+          - traces/dest1
+        - condition: resource.attributes["tenant"] == "tenant2"
+          context: span
+          pipelines:
+          - traces/dest2
+        - condition: resource.attributes["tenant"] == "tenant3"
+          context: span
+          pipelines:
+          - traces/dest3
+      routing/metrics:
+        default_pipelines:
+        - metrics/destlocal
+        error_mode: ignore
+        table:
+        - condition: resource.attributes["tenant"] == "tenant1"
+          context: metric
+          pipelines:
+          - metrics/dest1
+        - condition: resource.attributes["tenant"] == "tenant2"
+          context: metric
+          pipelines:
+          - metrics/dest2
+        - condition: resource.attributes["tenant"] == "tenant3"
+          context: metric
+          pipelines:
+          - metrics/dest3
+    exporters:
+      debug:
+        sampling_initial: 5
+        sampling_thereafter: 200
+        verbosity: detailed
+      otlp/dest1:
+        endpoint: "dest1-collector.otcrouting.svc:4317"
+        tls:
+          insecure: true
+      otlp/dest2:
+        endpoint: "dest2-collector.otcrouting.svc:4317"
+        tls:
+          insecure: true
+      otlp/dest3:
+        endpoint: "dest3-collector.otcrouting.svc:4317"
+        tls:
+          insecure: true
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - routing/logs
+          receivers:
+            - otlp
+        logs/dest1:
+          exporters:
+            - otlp/dest1
+          receivers:
+            - routing/logs
+        logs/dest2:
+          exporters:
+            - otlp/dest2
+          receivers:
+            - routing/logs
+        logs/dest3:
+          exporters:
+            - otlp/dest3
+          receivers:
+            - routing/logs
+        logs/destlocal:
+          exporters:
+            - debug
+          receivers:
+            - routing/logs
+        metrics:
+          exporters:
+            - routing/metrics
+          receivers:
+            - otlp
+        metrics/dest1:
+          exporters:
+            - otlp/dest1
+          receivers:
+            - routing/metrics
+        metrics/dest2:
+          exporters:
+            - otlp/dest2
+          receivers:
+            - routing/metrics
+        metrics/dest3:
+          exporters:
+            - otlp/dest3
+          receivers:
+            - routing/metrics
+        metrics/destlocal:
+          exporters:
+            - debug
+          receivers:
+            - routing/metrics
+        traces:
+          exporters:
+            - routing/traces
+          receivers:
+            - otlp
+        traces/dest1:
+          exporters:
+            - otlp/dest1
+          receivers:
+            - routing/traces
+        traces/dest2:
+          exporters:
+            - otlp/dest2
+          receivers:
+            - routing/traces
+        traces/dest3:
+          exporters:
+            - otlp/dest3
+          receivers:
+            - routing/traces
+        traces/destlocal:
+          exporters:
+            - debug
+          receivers:
+            - routing/traces
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 1
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: deployment
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  upgradeStrategy: automatic

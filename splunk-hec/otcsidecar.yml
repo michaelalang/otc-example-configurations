@@ -1,0 +1,72 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: splunk-hec
+  namespace: otcsplunkhec
+spec:
+  config:
+    exporters:
+      otlphttp/splunk_hec:
+        encoding: json
+        headers:
+          Authorization: Splunk 11111111-2222-3333-4444-555555555555
+        logs_endpoint: https://127.0.0.1:8088/services/collector/raw?sourcetype=otlp_clean
+        tls:
+          insecure: false
+          insecure_skip_verify: true
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - otlphttp/splunk_hec
+          receivers:
+            - otlp
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 3
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: sidecar
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  targetAllocator:
+    allocationStrategy: consistent-hashing
+    collectorNotReadyGracePeriod: 30s
+    collectorTargetReloadInterval: 30s
+    filterStrategy: relabel-config
+    observability:
+      metrics: {}
+    prometheusCR:
+      scrapeInterval: 30s
+    resources: {}
+  upgradeStrategy: automatic
+  volumeMounts:
+    - mountPath: /tmp
+      name: tmp
+  volumes:
+    - emptyDir: {}
+      name: tmp
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: otc-container

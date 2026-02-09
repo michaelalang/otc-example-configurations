@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations: {}
+  labels:
+    app: kafka
+    app.kubernetes.io/component: kafka
+  name: kafka
+  namespace: otckafka
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: kafka
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        sidecar.opentelemetry.io/inject: "kafka"
+      creationTimestamp: null
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: broker
+          image: docker.io/apache/kafka:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: KAFKA_PROCESS_ROLES
+            value: "broker,controller"
+          - name: KAFKA_NODE_ID
+            value: "1"
+          - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+            value: "1@127.0.0.1:9093"
+          - name: KAFKA_LISTENERS
+            value: "PLAINTEXT://:9092,CONTROLLER://:9093"
+          - name: KAFKA_INTER_BROKER_LISTENER_NAME
+            value: "PLAINTEXT"
+          - name: KAFKA_CONTROLLER_LISTENER_NAMES
+            value: "CONTROLLER"
+          - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+            value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+          - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+            value: "1"
+          - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+            value: "1"
+          - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+            value: "1"
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+          resources:
+            limits:
+              cpu: '1'
+              memory: 1Gi
+            requests:
+              cpu: 10m
+              memory: 256Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - name: kafka
+              mountPath: /opt/kafka/config
+            - name: kafkalogs
+              mountPath: /opt/kafka/logs
+        - name: consumer
+          args:
+            - trap "exit 0" SIGTERM SIGINT; /opt/app-root/bin/pip install faker kafka-python ; while true; do sleep 10 & wait $!; done
+          command:
+            - /bin/sh
+            - -c
+          image: registry.redhat.io/ubi9/python-312@sha256:bf14f21e4e45e6c6dfe0d498090546e5e06923462a0ba5bc29e32640aeaedf36
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: consumer
+              mountPath: /opt/app-root/src/consumer.py
+              subPath: consumer.py
+        - name: producer
+          args:
+            - trap "exit 0" SIGTERM SIGINT; /opt/app-root/bin/pip install faker kafka-python ; while true; do sleep 10 & wait $!; done
+          command:
+            - /bin/sh
+            - -c
+          image: registry.redhat.io/ubi9/python-312@sha256:bf14f21e4e45e6c6dfe0d498090546e5e06923462a0ba5bc29e32640aeaedf36
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: producer
+              mountPath: /opt/app-root/src/producer.py
+              subPath: producer.py
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        topology.istio.io/subzone: zone1
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 3
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: consumer
+            optional: true
+          name: consumer
+        - configMap:
+            defaultMode: 420
+            name: producer
+            optional: true
+          name: producer
+        - name: kafka
+          emptyDir: {}
+        - name: kafkalogs
+          emptyDir: {}
+
