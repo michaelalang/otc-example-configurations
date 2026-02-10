@@ -71,7 +71,7 @@ spec:
       transform/rename_metric:
         error_mode: ignore
         metric_statements:
-          - context: metric
+          - context: datapoint
             statements:
               - set(metric.name, "k8s_resource_flapping") where metric.name == "log.record.count"
               - set(resource.attributes["job"], "${JOB}")
@@ -80,7 +80,7 @@ spec:
               - set(datapoint.attributes["resource_name"], "n/a")
               - set(datapoint.attributes["resource_type"], "n/a")
               - set(datapoint.attributes["source_user"], "n/a")
-              - set(datapoint.attributes["verb"], "n/a"
+              - set(datapoint.attributes["verb"], "n/a")
               - set(datapoint.attributes["resource_name"], resource.attributes["resource_name"]) where resource.attributes["resource_name"] != nil
               - set(datapoint.attributes["resource_type"], resource.attributes["resource_type"]) where resource.attributes["resource_type"] != nil
               - set(datapoint.attributes["source_user"], resource.attributes["source_user"]) where resource.attributes["source_user"] != nil
