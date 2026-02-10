@@ -99,7 +99,7 @@ spec:
               - set(datapoint.attributes["resource_type"], resource.attributes["resource_type"]) where resource.attributes["resource_type"] != nil
               - set(datapoint.attributes["source_user"], resource.attributes["source_user"]) where resource.attributes["source_user"] != nil
               - set(datapoint.attributes["verb"], resource.attributes["verb"]) where resource.attributes["verb"] != nil
-              - set(datapoint.attributes["target_resource"], resource.attributes["objectRef.resource"]) where IsMap(log.body) and log.body["objectRef"]["resource"] != nil
+              - set(datapoint.attributes["target_resource"], resource.attributes["objectRef.resource"]) where resource.attribute["objectRef.resource"] != nil
               - set(datapoint.attributes["cluster"], resource.attributes["hosted_control_plane"]) where resource.attributes["hosted_control_plane"] != nil
               - set(datapoint.attributes["cluster"], "${CLUSTERNAME}") where datapoint.attributes["cluster"] == nil
 
