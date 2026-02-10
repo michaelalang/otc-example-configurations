@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-clusterlogs-collector-scc
+rules:
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - otel-clusterlogs-collector-scc
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use

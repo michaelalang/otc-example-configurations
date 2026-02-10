@@ -1,6 +1,6 @@
 # Resource flapping detection
 
-** NOTE ** this scenario is perfectly 10000% unsupported by Red Hat !!!!
+**NOTE** this scenario is perfectly 10000% unsupported by Red Hat !!!!
 
 the use-case show-cases how we could detect resource flapping like when two CI/CD engines race on one Custom Resource (CR).
 The deployment will require to have **no** `openshift-logging` being present/setup. As mentioned this is an explicit decision as we don't want ClusterLogForwarder (CLF) and OpenTelemetryCollector (OTC) race for the logs.
@@ -27,7 +27,7 @@ oc create -k resource-flap-detection
 ```
 
 Second we are going to deploy the OpenTelemetryCollector
-** NOTE ** ensure to point the `prometheusremotewriter` exporter to a valid Prometheus instance accepting remote writes on `/api/v1/otlp`.
+**NOTE** ensure to point the `prometheusremotewriter` exporter to a valid Prometheus instance accepting remote writes on `/api/v1/otlp`.
 
 ```
 oc create -f resource-flap-detection/otc.yml

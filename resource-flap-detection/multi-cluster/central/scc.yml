@@ -1,0 +1,25 @@
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: otel-clusterlogs-collector-scc
+allowPrivilegedContainer: false
+requiredDropCapabilities:
+- ALL
+allowHostDirVolumePlugin: true
+volumes:
+- configMap
+- emptyDir
+- hostPath
+- projected
+- secret
+defaultAllowPrivilegeEscalation: false
+allowPrivilegeEscalation: false
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+readOnlyRootFilesystem: true
+forbiddenSysctls:
+- '*'
+seccompProfiles:
+- runtime/default
