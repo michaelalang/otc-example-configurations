@@ -52,5 +52,5 @@ The none HCP Cluster can run a daemonset only on the ControlPlane nodes where th
 
 A Grafana Dashboard to visualize the logs-to-metrics is located in `resource-flap-detection/multi-cluster/multi-cluster-dashboard.json`.
 
-![Visualizing multi-cluster flapping resources](resource-flap-detection/multi-cluster/multi-cluster-dashboard.png)
+![Visualizing multi-cluster flapping resources](multi-cluster-dashboard.png)
 
