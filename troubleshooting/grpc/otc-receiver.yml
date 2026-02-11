@@ -16,8 +16,6 @@ spec:
           grpc:
             endpoint: "0.0.0.0:4317"
     service:
-      extensions:
-      - file_storage
       pipelines:
         logs:
           exporters:
