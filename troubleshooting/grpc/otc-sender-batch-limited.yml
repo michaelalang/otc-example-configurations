@@ -1,0 +1,110 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otc-sender
+  namespace: otcdebuggrpc
+spec:
+  config:
+    exporters:
+      otlp:
+        endpoint: "otc-receiver-collector:4317"
+        tls:
+          insecure: true
+        retry_on_failure:
+          enabled: true
+          initial_interval: 60s
+          max_elapsed_time: 600s
+          max_interval: 120s
+        sending_queue:
+          block_on_overflow: false
+          num_consumers: 5
+          queue_size: 10
+          storage: file_storage
+    processors:
+      batch:
+        send_batch_max_size: 1
+        send_batch_size: 1
+        timeout: 200ms
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+            max_recv_msg_size_mib: 5
+    extensions:
+      file_storage:
+        compaction:
+          cleanup_on_start: false
+          directory: /queues/compact/
+          on_start: false
+        create_directory: true
+        directory: /queues/work/
+        fsync: true
+        timeout: 1s
+    service:
+      extensions:
+      - file_storage
+      pipelines:
+        logs:
+          exporters:
+            - otlp
+          processors:
+            - batch
+          receivers:
+            - otlp
+        metrics:
+          exporters:
+            - otlp
+          processors:
+            - batch
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - otlp
+          processors:
+            - batch
+          receivers:
+            - otlp
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  volumeMounts:
+  - mountPath: /queues
+    name: otel-queue
+  volumes:
+  - emptyDir: {}
+    name: otel-queue
+  configVersions: 1
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: deployment
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  targetAllocator:
+    allocationStrategy: consistent-hashing
+    collectorNotReadyGracePeriod: 30s
+    collectorTargetReloadInterval: 30s
+    filterStrategy: relabel-config
+    observability:
+      metrics: {}
+    prometheusCR:
+      scrapeInterval: 30s
+    resources: {}
+  upgradeStrategy: automatic
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: otc-container

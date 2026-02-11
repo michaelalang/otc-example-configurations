@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: telemetrygen
+  name: telemetrygen2
+  namespace: otcdebuggrpc
+spec:
+  containers:
+    - args:
+        - logs 
+        - --otlp-endpoint 
+        - otc-sender-collector:4317
+        - --logs 
+        - "2" 
+        - --body 
+        - "Hello World" 
+        - --otlp-insecure
+        - --size
+        - "2"
+        - --batch-size
+        - "2"
+      image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
+      imagePullPolicy: IfNotPresent
+      name: logs
+    - args:
+        - metrics
+        - --otlp-endpoint
+        - otc-sender-collctor:4317
+        - --metrics
+        - "2"
+        - --metric-type 
+        - Gauge
+        - --otlp-insecure
+        - --size
+        - "2"
+        - --batch-size
+        - "2"
+      image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
+      imagePullPolicy: IfNotPresent
+      name: metrics
+    - args:
+        - traces
+        - --otlp-endpoint
+        - otc-sender-collector:4317
+        - --traces
+        - "2"
+        - --otlp-insecure
+        - --size
+        - "2"
+        - --batch-size
+        - "2"
+      image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
+      imagePullPolicy: IfNotPresent
+      name: traces
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: default-scheduler
+  terminationGracePeriodSeconds: 30
