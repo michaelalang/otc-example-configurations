@@ -2,32 +2,11 @@
   "__inputs": [
     {
       "name": "DS_PROMETHEUS",
-      "label": "prometheus",
+      "label": "Select your Prometheus Datasource",
       "description": "",
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "12.3.1"
-    },
-    {
-      "type": "panel",
-      "id": "piechart",
-      "name": "Pie chart",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
     }
   ],
   "annotations": {
@@ -51,66 +30,95 @@
   "graphTooltip": 0,
   "id": null,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
-          "mappings": [],
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "gridPos": {
-        "h": 22,
-        "w": 12,
+        "h": 1,
+        "w": 24,
         "x": 0,
         "y": 0
       },
-      "id": 1,
+      "id": 2,
+      "title": "Conflicted Resources (Active Conflicts Only)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Visualizes activity per user for resources that have >1 distinct user actively changing them.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 3,
+      "maxPerRow": 2,
       "options": {
-        "displayLabels": [
-          "percent",
-          "name"
-        ],
         "legend": {
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true,
-          "values": [
-            "percent",
-            "value"
-          ]
+          "showLegend": true
         },
-        "pieType": "donut",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "sort": "desc",
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.1",
+      "repeat": "conflicted_resources",
+      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
@@ -118,254 +126,78 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "exemplar": false,
-          "expr": "topk($topkmax, sum by (resource_name, resource_type) (count_over_time(k8s_resource_flapping_total{cluster=~\"$cluster\", replica=\"0\",resource_name=~\"$resource\",resource_type!~\"(events|leases)\"}[$__range:1m])) > 5)",
-          "instant": true,
-          "legendFormat": "{{resource_name}}/{{resource_type}}",
-          "range": false,
+          "expr": "sum by (source_user) (\r\n  changes(k8s_resource_flapping_total{\r\n    cluster=~\"$cluster\", \r\n    replica=\"0\",\r\n    resource_name=~\"$conflicted_resources\"\r\n  }[$__range])\r\n)",
+          "legendFormat": "{{source_user}}",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "High frequent changes",
-      "type": "piechart"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 11,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "id": 2,
-      "options": {
-        "displayLabels": [
-          "percent",
-          "name"
-        ],
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "values": [
-            "percent",
-            "value"
-          ]
-        },
-        "pieType": "donut",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "sort": "desc",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.1",
-      "targets": [
-        {
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "topk($topkmax, sum by (source_user, verb) (count_over_time(k8s_resource_flapping_total{cluster=~\"$cluster\", replica=\"0\",source_user=~\"$user\",resource_name=~\"$resource\"}[$__range:1m])))",
-          "instant": true,
-          "legendFormat": "{{source_user}}/{{verb}}",
-          "range": false,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
-        }
-      ],
-      "title": "User to verb",
-      "type": "piechart"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 11,
-        "w": 12,
-        "x": 12,
-        "y": 11
-      },
-      "id": 3,
-      "options": {
-        "displayLabels": [
-          "percent",
-          "name"
-        ],
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "values": [
-            "percent",
-            "value"
-          ]
-        },
-        "pieType": "donut",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "sort": "desc",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.1",
-      "targets": [
-        {
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "topk($topkmax, sum by (source_user, resource_name, resource_type) (count_over_time(k8s_resource_flapping_total{cluster=~\"$cluster\", replica=\"0\",source_user=~\"$user\",resource_name=~\"$resource\"}[$__range:1m])))",
-          "instant": true,
-          "legendFormat": "{{source_user}}/{{resource_name}}/{{resource_type}}",
-          "range": false,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
-        }
-      ],
-      "title": "User to Resource",
-      "type": "piechart"
+      "title": "$conflicted_resources",
+      "type": "timeseries"
     }
   ],
-  "preload": false,
-  "schemaVersion": 42,
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
-        "allValue": ".+",
         "current": {},
-        "definition": "query_result(k8s_resource_flapping_total{})",
-        "includeAll": true,
-        "multi": true,
-        "name": "resource",
-        "options": [],
-        "query": {
-          "qryType": 3,
-          "query": "query_result(k8s_resource_flapping_total{})",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
         },
-        "refresh": 1,
-        "regex": "/resource_name=\"(?<resource>.+?)\"/",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "allValue": ".+",
-        "current": {},
-        "definition": "query_result(k8s_resource_flapping_total{})",
+        "definition": "label_values(k8s_resource_flapping_total, cluster)",
+        "hide": 0,
         "includeAll": true,
-        "multi": true,
-        "name": "user",
-        "options": [],
-        "query": {
-          "qryType": 3,
-          "query": "query_result(k8s_resource_flapping_total{})",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 1,
-        "regex": "/source_user=\"(?<user>.+?)\"/",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {
-          "text": "25",
-          "value": "25"
-        },
-        "name": "topkmax",
-        "options": [
-          {
-            "selected": true,
-            "text": "25",
-            "value": "25"
-          }
-        ],
-        "query": "25",
-        "type": "textbox"
-      },
-      {
-        "allValue": ".+",
-        "current": {},
-        "definition": "label_values(k8s_resource_flapping_total,cluster)",
-        "includeAll": true,
+        "multi": false,
         "name": "cluster",
         "options": [],
         "query": {
-          "qryType": 1,
-          "query": "label_values(k8s_resource_flapping_total,cluster)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          "query": "label_values(k8s_resource_flapping_total, cluster)",
+          "refId": "StandardVariableQuery"
         },
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "query_result(count by (resource_name) (sum by (resource_name, source_user) (changes(k8s_resource_flapping_total{cluster=~\"$cluster\", replica=\"0\"}[1h]) > 0)) > 1)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Conflicted Resources",
+        "multi": true,
+        "name": "conflicted_resources",
+        "options": [],
+        "query": {
+          "query": "query_result(count by (resource_name) (sum by (resource_name, source_user) (changes(k8s_resource_flapping_total{cluster=~\"$cluster\", replica=\"0\"}[1h]) > 0)) > 1)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "/resource_name=\"([^\"]+)\"/",
+        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       }
     ]
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "browser",
-  "title": "Resource flapping",
-  "uid": "milx6hk",
-  "version": 8,
+  "timezone": "",
+  "title": "Resource Conflict Analyzer",
+  "uid": null,
+  "version": 0,
   "weekStart": ""
 }
