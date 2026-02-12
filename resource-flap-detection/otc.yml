@@ -111,8 +111,6 @@ spec:
           initial_interval: 60s
           max_elapsed_time: 600s
           max_interval: 120s
-        resource_to_telemetry_conversion:
-          enabled: true
 
     service:
       pipelines:
