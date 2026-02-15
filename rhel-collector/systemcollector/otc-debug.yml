@@ -1,0 +1,34 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:14318
+      grpc:
+        endpoint: 127.0.0.1:14317
+
+exporters:
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  pipelines:
+    logs:
+      receivers: 
+        - otlp
+      exporters: 
+        - debug
+    metrics:
+      receivers:
+        - otlp
+      exporters:
+        - debug
+    traces:
+      receivers:
+        - otlp
+      exporters:
+        - debug
+  telemetry: 
+    logs:
+      level: none

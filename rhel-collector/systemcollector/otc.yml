@@ -1,0 +1,225 @@
+receivers:
+  journald:
+    directory: /run/log/journal # RHEL9, RHEL10/Fedora43 /var/log/journal
+    units: [] 
+    start_at: end
+
+  filelog/audit:
+    include: [/var/log/audit/audit.log]
+    start_at: end
+    operators:
+      - type: regex_parser
+        regex: 'type=(?P<audit_type>[^ ]+)\s+msg=audit\((?P<audit_ts>[0-9\.]+):\d+\):\s*(?P<payload>.*)$'
+      - type: time_parser
+        parse_from: attributes.audit_ts
+        layout_type: epoch
+        layout: 's.ms' 
+      - type: key_value_parser
+        parse_from: attributes.payload
+        parse_to: attributes
+        delimiter: "=" 
+        pair_delimiter: " "
+      - type: remove
+        field: attributes.audit_ts
+      - type: remove
+        field: attributes.payload
+      - type: add
+        field: attributes["log.type"]
+        value: audit
+
+  hostmetrics:
+    root_path: /
+    collection_interval: 10s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      filesystem:
+
+  otlp:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4318
+      grpc:
+        endpoint: 127.0.0.1:4317
+
+processors:
+  resourcedetection/system:
+    detectors: 
+      - system
+    override: false
+
+  transform/enrich_logs:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - 'set(log.attributes["log.type"], "kernel") where log.attributes["_TRANSPORT"] == "kernel" or log.attributes["transport"] == "kernel"'
+          - 'set(resource.attributes["service.name"], log.attributes["systemd.unit"]) where log.attributes["systemd.unit"] != nil'
+          - 'set(resource.attributes["hostname"], resource.attributes["host.name"]) where resource.attributes["host.name"] != nil'
+          - 'set(resource.attributes["hostname"], log.attributes["host.hostname"]) where log.attributes["host.hostname"] != nil'
+          - 'delete_key(resource.attributes, "host.name")'
+          - 'set(log.attributes["hostname"], log.attributes["host.name"]) where log.attributes["host.name"] != nil'
+          - 'delete_key(log.attributes, "host.name")'
+          - 'set(log.attributes["log.type"], "container") where log.attributes["CONTAINER_ID"] != nil'
+          - 'merge_maps(log.attributes, log.body, "insert") where IsMap(log.body)'
+          - 'set(log.body, "") where IsMap(log.body)'
+          - 'merge_maps(log.attributes, ParseJSON(log.body), "insert") where IsString(log.body) and IsMatch(log.body, "^\\{")'
+          - 'set(log.body, "") where IsString(log.body) and IsMatch(log.body, "^\\{")'
+          - 'set(log.attributes["syslog_identifier"], log.attributes["SYSLOG_IDENTIFIER"]) where log.attributes["SYSLOG_IDENTIFIER"] != nil'
+          - 'delete_key(log.attributes, "SYSLOG_IDENTIFIER")'
+
+          #### cleanup and rewrite from upper to lower
+          - 'set(log.attributes["transport"], log.attributes["_TRANSPORT"]) where log.attributes["_TRANSPORT"] != nil'
+          - 'delete_key(log.attributes, "_TRANSPORT")'
+          - 'set(log.attributes["log.type"], "kernel") where log.attributes["transport"] == "kernel"'
+          - 'set(log.attributes["pid"], log.attributes["_PID"]) where log.attributes["_PID"] != nil'
+          - 'delete_key(log.attributes, "_PID")'
+          - 'set(log.attributes["uid"], log.attributes["_UID"]) where log.attributes["_UID"] != nil'
+          - 'delete_key(log.attributes, "_UID")'
+          - 'set(log.attributes["gid"], log.attributes["_GID"]) where log.attributes["_GID"] != nil'
+          - 'delete_key(log.attributes, "_GID")'
+          - 'set(log.attributes["comm"], log.attributes["_COMM"]) where log.attributes["_COMM"] != nil'
+          - 'delete_key(log.attributes, "_COMM")'
+          - 'set(log.attributes["exe"], log.attributes["_EXE"]) where log.attributes["_EXE"] != nil'
+          - 'delete_key(log.attributes, "_EXE")'
+          - 'set(log.attributes["cmdline"], log.attributes["_CMDLINE"]) where log.attributes["_CMDLINE"] != nil'
+          - 'delete_key(log.attributes, "_CMDLINE")'
+          - 'set(log.attributes["systemd_unit"], log.attributes["_SYSTEMD_UNIT"]) where log.attributes["_SYSTEMD_UNIT"] != nil'
+          - 'delete_key(log.attributes, "_SYSTEMD_UNIT")'
+          - 'set(log.attributes["systemd_slice"], log.attributes["_SYSTEMD_SLICE"]) where log.attributes["_SYSTEMD_SLICE"] != nil'
+          - 'delete_key(log.attributes, "_SYSTEMD_SLICE")'
+          - 'set(log.attributes["systemd_cgroup"], log.attributes["_SYSTEMD_CGROUP"]) where log.attributes["_SYSTEMD_CGROUP"] != nil'
+          - 'delete_key(log.attributes, "_SYSTEMD_CGROUP")'
+          - 'set(log.attributes["cap_effective"], log.attributes["_CAP_EFFECTIVE"]) where log.attributes["_CAP_EFFECTIVE"] != nil'
+          - 'delete_key(log.attributes, "_CAP_EFFECTIVE")'
+          - 'set(log.attributes["syslog_identifier"], log.attributes["SYSLOG_IDENTIFIER"]) where log.attributes["SYSLOG_IDENTIFIER"] != nil'
+          - 'delete_key(log.attributes, "SYSLOG_IDENTIFIER")'
+          - 'set(log.body, log.attributes["MESSAGE"]) where log.body != nil'
+          - 'delete_key(log.attributes, "MESSAGE")'
+          - 'set(log.attributes["priority"], log.attributes["PRIORITY"]) where log.attributes["PRIORITY"] != nil'
+          - 'delete_key(log.attributes, "PRIORITY")'
+          - 'set(log.attributes["container_name"], log.attributes["CONTAINER_NAME"]) where log.attributes["CONTAINER_NAME"] != nil'
+          - 'delete_key(log.attributes, "CONTAINER_NAME")'
+          - 'set(log.attributes["container_id_full"], log.attributes["CONTAINER_ID_FULL"]) where log.attributes["CONTAINER_ID_FULL"] != nil'
+          - 'delete_key(log.attributes, "CONTAINER_ID_FULL")'
+          - 'set(log.attributes["container_id"], log.attributes["CONTAINER_ID"]) where log.attributes["CONTAINER_ID"] != nil'
+          - 'delete_key(log.attributes, "CONTAINER_ID")'
+          - 'set(log.attributes["log.type"], "container") where log.attributes["container_id"] != nil and log.attributes["log.type"] == nil'
+          - 'set(log.attributes["selinux_context"], log.attributes["_SELINUX_CONTEXT"]) where log.attributes["_SELINUX_CONTEXT"] != nil'
+          - 'delete_key(log.attributes, "_SELINUX_CONTEXT")'
+          - 'set(log.attributes["runtime_scope"], log.attributes["_RUNTIME_SCOPE"]) where log.attributes["_RUNTIME_SCOPE"] != nil'
+          - 'delete_key(log.attributes, "_RUNTIME_SCOPE")'
+          - 'set(log.attributes["monotonic_timestamp"], log.attributes["__MONOTONIC_TIMESTAMP"]) where log.attributes["__MONOTONIC_TIMESTAMP"] != nil'
+          - 'delete_key(log.attributes, "__MONOTONIC_TIMESTAMP")'
+          - 'set(log.attributes["source_monotonic_timestamp"], log.attributes["_SOURCE_MONOTONIC_TIMESTAMP"]) where log.attributes["_SOURCE_MONOTONIC_TIMESTAMP"] != nil'
+          - 'delete_key(log.attributes, "_SOURCE_MONOTONIC_TIMESTAMP")'
+          - 'set(log.attributes["systemd_invocation_id"], log.attributes["_SYSTEMD_INVOCATION_ID"]) where log.attributes["_SYSTEMD_INVOCATION_ID"] != nil'
+          - 'delete_key(log.attributes, "_SYSTEMD_INVOCATION_ID")'
+          - 'set(log.attributes["cursor"], log.attributes["__CURSOR"]) where log.attributes["__CURSOR"] != nil'
+          - 'delete_key(log.attributes, "__CURSOR")'
+          - 'set(log.attributes["syslog_facility"], log.attributes["SYSLOG_FACILITY"]) where log.attributes["SYSLOG_FACILITY"] != nil'
+          - 'delete_key(log.attributes, "SYSLOG_FACILITY")'
+          - 'set(log.attributes["syslog_timestamp"], log.attributes["SYSLOG_TIMESTAMP"]) where log.attributes["SYSLOG_TIMESTAMP"] != nil'
+          - 'delete_key(log.attributes, "SYSLOG_TIMESTAMP")'
+          - 'set(log.attributes["audit_session"], log.attributes["_AUDIT_SESSION"]) where log.attributes["_AUDIT_SESSION"] != nil'
+          - 'delete_key(log.attributes, "_AUDIT_SESSION")'
+          - 'set(log.attributes["code_func"], log.attributes["CODE_FUNC"]) where log.attributes["CODE_FUNC"] != nil'
+          - 'delete_key(log.attributes, "CODE_FUNC")'
+          - 'set(log.attributes["code_line"], log.attributes["CODE_LINE"]) where log.attributes["CODE_LINE"] != nil'
+          - 'delete_key(log.attributes, "CODE_LINE")'
+          - 'set(log.attributes["code_file"], log.attributes["CODE_FILE"]) where log.attributes["CODE_FILE"] != nil'
+          - 'delete_key(log.attributes, "CODE_FILE")'
+
+          - 'delete_key(log.attributes, "_BOOT_ID")'
+          - 'delete_key(log.attributes, "_MACHINE_ID")'
+          - 'delete_key(log.attributes, "_HOSTNAME")'
+          - 'delete_key(log.attributes, "_SOURCE_REALTIME_TIMESTAMP")'
+          - 'delete_key(log.attributes, "_STREAM_ID")'
+
+exporters:
+  otlphttp/loki:
+    endpoint: 'https://loki.apps.example.com/otlp'
+    retry_on_failure:
+      enabled: true
+      initial_interval: 60s
+      max_elapsed_time: 600s
+      max_interval: 120s
+    sending_queue:
+      block_on_overflow: false
+      num_consumers: 20
+      queue_size: 10000
+      storage: file_storage
+    timeout: 120s
+    tls:
+      insecure_skip_verify: true
+
+  otlphttp/prometheusremotewrite:
+    endpoint: 'https://prometheus.apps.example.com/api/v1/otlp'
+    retry_on_failure:
+      enabled: true
+      initial_interval: 60s
+      max_elapsed_time: 600s
+      max_interval: 120s
+    sending_queue:
+      block_on_overflow: false
+      num_consumers: 20
+      queue_size: 10000
+      storage: file_storage
+    timeout: 120s
+    tls:
+      insecure_skip_verify: true
+
+  otlp/tracecollector:
+    endpoint: 'https://tracecollector.apps.example.com:443'
+    retry_on_failure:
+      enabled: true
+      initial_interval: 60s
+      max_elapsed_time: 600s
+      max_interval: 120s
+    sending_queue:
+      block_on_overflow: false
+      num_consumers: 20
+      queue_size: 100000
+      storage: file_storage
+    tls:
+      insecure_skip_verify: true
+
+extensions:
+  file_storage:
+    compaction:
+      cleanup_on_start: false
+      directory: /queue/compact/
+      on_start: false
+    create_directory: true
+    directory: /queue/work/
+    fsync: true
+    timeout: 1s
+
+service:
+  extensions:
+    - file_storage
+  pipelines:
+    logs:
+      receivers: 
+        - journald
+        - filelog/audit
+        - otlp
+      processors: 
+        - resourcedetection/system
+        - transform/enrich_logs
+      exporters: 
+        - otlphttp/loki
+    metrics:
+      receivers: 
+        - hostmetrics
+        - otlp
+      processors: 
+        - resourcedetection/system
+      exporters: 
+        - otlphttp/prometheusremotewrite
+    traces:
+      receivers:
+        - otlp
+      exporters:
+        - otlp/tracecollector
