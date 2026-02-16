@@ -1,0 +1,66 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: TargetAllocator
+metadata:
+  name: otcta2
+spec:
+  additionalContainers:
+    - args:
+        - 'trap "exit 0" SIGTERM SIGINT;
+          while true; do sleep 10 & wait $!; done
+          '
+      command:
+        - /bin/sh
+        - -c
+      image: image-registry.openshift-image-registry.svc:5000/openshift/cli
+      name: debug
+  allocationStrategy: consistent-hashing
+  collectorNotReadyGracePeriod: 30s
+  filterStrategy: relabel-config
+  imagePullPolicy: IfNotPresent
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  observability:
+    metrics:
+      enableMetrics: true
+  prometheusCR:
+    enabled: false
+    scrapeInterval: 30s
+  replicas: 1
+  scrapeConfigs:
+    - fallback_scrape_protocol: PrometheusText1.0.0
+      job_name: otc3
+      scrape_interval: 10s
+      scheme: http
+      static_configs:
+        - targets:
+            - 127.0.0.2:9090
+      metric_relabel_configs:
+        - source_labels: [__name__]
+          regex: 'up|TargetAllocator' 
+          action: keep
+    - fallback_scrape_protocol: PrometheusText1.0.0
+      job_name: otc4
+      scrape_interval: 10s
+      scheme: http
+      static_configs:
+        - targets:
+            - 127.0.0.2:9091
+      metric_relabel_configs:
+        - source_labels: [__name__]
+          regex: 'up|TargetAllocator'
+          action: keep
+    - fallback_scrape_protocol: PrometheusText1.0.0
+      job_name: otc5
+      scrape_interval: 10s
+      scheme: http
+      static_configs:
+        - targets:
+            - 127.0.0.2:9092
+      metric_relabel_configs:
+        - source_labels: [__name__]
+          regex: 'up|TargetAllocator'
+          action: keep
+  serviceAccount: default 
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: ta-container
+

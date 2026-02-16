@@ -1,0 +1,81 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otcta
+  namespace: otctargetallocator
+spec:
+  additionalContainers:
+    - args:
+        - |
+          echo "# HELP TargetAllocator a sample counter metric" > /tmp/metrics
+          echo "# TYPE TargetAllocator counter" >> /tmp/metrics
+          echo "TargetAllocator 1" >> /tmp/metrics
+          python -m http.server --bind 0.0.0.0 --directory /tmp 9090 &
+          python -m http.server --bind 0.0.0.0 --directory /tmp 9091 &
+          python -m http.server --bind 0.0.0.0 --directory /tmp 9092 &
+          trap "exit 0" SIGTERM SIGINT;
+          while true; do sleep 10 & wait $!; done
+      command:
+        - /bin/sh
+        - '-c'
+      image: 'image-registry.openshift-image-registry.svc:5000/openshift/cli'
+      name: debug
+  config:
+    exporters:
+      debug:
+        sampling_initial: 5
+        sampling_thereafter: 200
+        verbosity: detailed
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        metric_expiration: 1m
+    receivers:
+      prometheus/ta1:
+        config: {}
+        target_allocator:
+          collector_id: '${POD_NAME}'
+          endpoint: 'http://otcta-targetallocator:80'
+          interval: 10s
+      prometheus/ta2:
+        target_allocator:
+          collector_id: '${POD_NAME}'
+          endpoint: 'http://otcta2-targetallocator:80'
+          interval: 10s
+    service:
+      pipelines:
+        metrics:
+          exporters:
+            - debug
+            - prometheus
+          receivers:
+            - prometheus/ta1
+            - prometheus/ta2
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 1
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: statefulset
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  serviceAccount: default
+  replicas: 1
+  resources: {}
+  targetAllocator:
+    enabled: false
+  upgradeStrategy: automatic
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: otc-container
