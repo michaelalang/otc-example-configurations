@@ -12,17 +12,20 @@ spec:
         verbosity: detailed
       kafka/exporter/logs2: # << produce to topic otlp_logs2
         topic: otlp_logs2
-        encoding: raw
+        logs:
+          encoding: raw
         brokers:
           - 127.0.0.1:9092
       kafka/exporter/logs3: # << produce to topic otlp_logs3
         topic: otlp_logs3
-        encoding: raw
+        logs:
+          encoding: raw
         brokers:
           - 127.0.0.1:9092
     receivers:
       kafka:
-        encoding: raw
+        logs:
+          encoding: raw
     processors:
       transform/kafka:
         log_statements:
