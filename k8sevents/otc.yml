@@ -1,0 +1,73 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: k8sevents
+spec:
+  config:
+    exporters:
+      debug:
+        sampling_initial: 5
+        sampling_thereafter: 200
+        verbosity: detailed
+    processors:
+      transform/clusterinject:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(log.attributes["openshift_cluster_name"], "${CLUSTERNAME}")
+              - set(log.attributes["openshift_cluster_id"], "${CLUSTERID}")
+              - set(log.attributes["openshift_log_type"], "events")
+              - set(log.attributes["log_type"], "events")
+    receivers:
+      k8s_events:
+        namespaces:
+          - "" # equals all
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - debug
+          processors:
+            - transform/clusterinject
+          receivers:
+            - k8s_events
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 1
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  env:
+    - name: CLUSTERNAME
+      value: example
+    - name: CLUSTERID
+      value: 3c122224-747c-4802-b42d-60ebbb405b6b
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: deployment
+  networkPolicy: {}
+  observability:
+    metrics: {}
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  serviceAccount: otlp
+  targetAllocator:
+    allocationStrategy: consistent-hashing
+    collectorNotReadyGracePeriod: 30s
+    collectorTargetReloadInterval: 30s
+    filterStrategy: relabel-config
+    observability:
+      metrics: {}
+    prometheusCR:
+      scrapeInterval: 30s
+    resources: {}
+  upgradeStrategy: automatic
