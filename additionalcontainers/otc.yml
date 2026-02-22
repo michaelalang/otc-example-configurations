@@ -33,7 +33,8 @@ spec:
   configVersions: 1
   additionalContainers:
   - name: debug
-    image: image-registry.openshift-image-registry.svc:5000/openshift/cli
+    #image: image-registry.openshift-image-registry.svc:5000/openshift/cli
+    image: quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:9bd872f8adc3138f7c3bd8267aa1a8ecb5cd2e7f3385b8434a684cfd52093909
     command: ["/bin/sh", "-c"]
     args:
       - |
