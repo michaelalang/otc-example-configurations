@@ -2,9 +2,9 @@ receivers:
   otlp:
     protocols:
       http:
-        endpoint: 127.0.0.1:14318
+        endpoint: 0.0.0.0:14318
       grpc:
-        endpoint: 127.0.0.1:14317
+        endpoint: 0.0.0.0:14317
 
 exporters:
   debug:
@@ -31,4 +31,4 @@ service:
         - debug
   telemetry: 
     logs:
-      level: none
+      level: Info
