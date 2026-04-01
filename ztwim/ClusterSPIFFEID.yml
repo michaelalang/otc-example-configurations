@@ -1,0 +1,18 @@
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: otc
+spec:
+  className: zero-trust-workload-identity-manager-spire
+  dnsNameTemplates:
+    - '{{ index .PodMeta.Labels "app.kubernetes.io/name" }}'
+    - '{{ index .PodMeta.Labels "app.kubernetes.io/name" }}.{{ .PodMeta.Namespace
+      }}'
+    - '{{ index .PodMeta.Labels "app.kubernetes.io/name" }}.{{ .PodMeta.Namespace
+      }}.svc.cluster.local'
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: opentelemetry-collector
+      app.kubernetes.io/managed-by: opentelemetry-operator
+  spiffeIDTemplate: spiffe://{{ .TrustDomain }}/ns/{{ .PodMeta.Namespace }}/sa/{{
+    .PodSpec.ServiceAccountName }}

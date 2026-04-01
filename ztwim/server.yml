@@ -1,0 +1,163 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  labels:
+    spiffe.io/spire-managed-identity: 'true'
+  name: server
+spec:
+  initContainers:
+    - args:
+        - -config
+        - /etc/spiffe-helper/helper.conf
+        - -daemon-mode
+        - 'false'
+      restartPolicy: Always
+      startupProbe:
+        exec:
+          command:
+            - stat
+            - /opt/client-certs/svid.pem
+        initialDelaySeconds: 1
+        periodSeconds: 2
+        failureThreshold: 15
+      image: registry.redhat.io/zero-trust-workload-identity-manager/spiffe-helper-rhel9:v0.10.0
+      name: spiffe-helper
+      resources: {}
+      securityContext:
+        capabilities:
+          drop:
+            - ALL
+      volumeMounts:
+        - mountPath: /spiffe-workload-api
+          name: spiffe-workload-api
+          readOnly: true
+        - mountPath: /opt/client-certs
+          name: client-certs
+        - mountPath: /etc/spiffe-helper
+          name: spiffe-helper
+  config:
+    exporters:
+      debug:
+        sampling_initial: 5
+        sampling_thereafter: 200
+        verbosity: detailed
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4317
+            tls:
+              ca_file: /opt/client-certs/svid_bundle.pem
+              cert_file: /opt/client-certs/svid.pem
+              client_ca_file: /opt/client-certs/svid_bundle.pem
+              key_file: /opt/client-certs/svid.key
+              max_version: '1.3'
+              min_version: '1.3'
+              reload_interval: 1m
+            include_metadata: true 
+    processors:
+      attributes/spiffe:
+        actions:
+          - key: peer.spiffe_id
+            from_context: metadata.x-spiffe-id 
+            action: upsert
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - debug
+          processors:
+            - attributes/spiffe
+          receivers:
+            - otlp
+        metrics:
+          exporters:
+            - debug
+          processors:
+            - attributes/spiffe
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - debug
+          processors:
+            - attributes/spiffe
+          receivers:
+            - otlp
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  configVersions: 1
+  daemonSetUpdateStrategy: {}
+  deploymentUpdateStrategy: {}
+  env:
+    - name: KUBE_NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: POD_SA_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.serviceAccountName
+    - name: TRUST_DOMAIN
+      valueFrom:
+          configMapKeyRef:
+            name: spiffe-trust-domain
+            key: TRUST_DOMAIN
+  ingress:
+    route: {}
+  ipFamilyPolicy: SingleStack
+  managementState: managed
+  mode: deployment
+  networkPolicy:
+    enabled: true
+  observability:
+    metrics:
+      enableMetrics: true
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: otc-container
+  podDnsConfig: {}
+  replicas: 1
+  resources: {}
+  targetAllocator:
+    allocationStrategy: consistent-hashing
+    collectorNotReadyGracePeriod: 30s
+    collectorTargetReloadInterval: 30s
+    filterStrategy: relabel-config
+    observability:
+      metrics: {}
+    prometheusCR:
+      scrapeInterval: 30s
+    resources: {}
+  upgradeStrategy: automatic
+  volumeMounts:
+    - mountPath: /opt/client-certs
+      name: client-certs
+  volumes:
+    - csi:
+        driver: csi.spiffe.io
+        readOnly: true
+      name: spiffe-workload-api
+    - emptyDir:
+        medium: Memory
+      name: client-certs
+    - configMap:
+        defaultMode: 420
+        name: spiffe-helper
+      name: spiffe-helper
+    - configMap:
+        defaultMode: 420
+        name: spiffe-trust-domain
+      name: spiffe-trust-domain

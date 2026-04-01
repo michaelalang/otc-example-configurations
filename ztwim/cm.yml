@@ -1,0 +1,32 @@
+apiVersion: v1
+data:
+  helper.conf: |
+    # SPIRE agent unix socket path
+    agent_address = "/spiffe-workload-api/spire-agent.sock"
+
+    # 
+    cmd = ""
+
+    #
+    cmd_args = ""
+
+    # Directory to store certificates
+    cert_dir = "/opt/client-certs"
+
+    # No renew signal is used in this example
+    renew_signal = ""
+
+    # Certificate, key and bundle names
+    svid_file_name = "svid.pem"
+    svid_key_file_name = "svid.key"
+    svid_bundle_file_name = "svid_bundle.pem"
+kind: ConfigMap
+metadata:
+  name: spiffe-helper
+---
+apiVersion: v1
+data:
+  TRUST_DOMAIN: example.com
+kind: ConfigMap
+metadata:
+  name: spiffe-trust-domain
