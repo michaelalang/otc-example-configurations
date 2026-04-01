@@ -212,3 +212,9 @@ Attributes:
      -> peer.spiffe_id: Str(spiffe://example.com/ns/ztwim-otc/sa/default,spiffe://example.com/ns/ztwim-otc/sa/client-collector)
 	{"resource": {"service.instance.id": "1d773198-907e-400e-881b-7bcbef3747bb", "service.name": "otelcol", "service.version": "0.144.0"}, "otelcol.component.id": "debug", "otelcol.component.kind": "exporter", "otelcol.signal": "traces"}
 ```
+
+* telemetryGen container `logs` and `metrics` shall read a line like
+
+```
+2026-04-01T11:58:55.836Z ERROR logs/worker.go:142 failed to export batched logs {"worker": 0, "error": "rpc error: code = Unauthenticated desc = authentication didn't succeed"}
+```
