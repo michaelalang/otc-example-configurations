@@ -20,6 +20,8 @@ data:
     svid_file_name = "svid.pem"
     svid_key_file_name = "svid.key"
     svid_bundle_file_name = "svid_bundle.pem"
+    cert_file_mode = 0644
+    key_file_mode = 0644
 kind: ConfigMap
 metadata:
   name: spiffe-helper

@@ -5,6 +5,36 @@ metadata:
     run: telemetrygen
   name: telemetrygen
 spec:
+  initContainers:
+    - args:
+        - -config
+        - /etc/spiffe-helper/helper.conf
+        - -daemon-mode
+        - 'false'
+      restartPolicy: Always
+      startupProbe:
+        exec:
+          command:
+            - stat
+            - /opt/client-certs/svid.pem
+        initialDelaySeconds: 1
+        periodSeconds: 2
+        failureThreshold: 15
+      image: registry.redhat.io/zero-trust-workload-identity-manager/spiffe-helper-rhel9:v0.10.0
+      name: spiffe-helper
+      resources: {}
+      securityContext:
+        capabilities:
+          drop:
+            - ALL
+      volumeMounts:
+        - mountPath: /spiffe-workload-api
+          name: spiffe-workload-api
+          readOnly: true
+        - mountPath: /opt/client-certs
+          name: client-certs
+        - mountPath: /etc/spiffe-helper
+          name: spiffe-helper
   containers:
     - args:
         - logs 
@@ -14,10 +44,35 @@ spec:
         - "1" 
         - --body 
         - "Hello World" 
-        - --otlp-insecure
+        - --ca-cert
+        - /opt/client-certs/svid_bundle.pem
+        - --client-cert
+        - /opt/client-certs/svid.pem 
+        - --client-key
+        - /opt/client-certs/svid.key
+        - --mtls
+        - --telemetry-attributes
+        - peer.spiffe_id="spiffe://$(TRUST_DOMAIN)/ns/$(POD_NAMESPACE)/sa/$(POD_SA_NAME)"
       image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
       imagePullPolicy: IfNotPresent
       name: logs
+      volumeMounts:
+        - mountPath: /opt/client-certs
+          name: client-certs
+      env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_SA_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: TRUST_DOMAIN
+          valueFrom:
+              configMapKeyRef:
+                name: spiffe-trust-domain
+                key: TRUST_DOMAIN
     - args:
         - metrics
         - --otlp-endpoint
@@ -26,20 +81,86 @@ spec:
         - "1"
         - --metric-type 
         - Gauge
-        - --otlp-insecure
+        - --ca-cert
+        - /opt/client-certs/svid_bundle.pem
+        - --client-cert
+        - /opt/client-certs/svid.pem
+        - --client-key
+        - /opt/client-certs/svid.key
+        - --mtls
+        - --telemetry-attributes
+        - peer.spiffe_id="spiffe://$(TRUST_DOMAIN)/ns/$(POD_NAMESPACE)/sa/$(POD_SA_NAME)"
       image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
       imagePullPolicy: IfNotPresent
       name: metrics
+      volumeMounts:
+        - mountPath: /opt/client-certs
+          name: client-certs
+      env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_SA_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: TRUST_DOMAIN
+          valueFrom:
+              configMapKeyRef:
+                name: spiffe-trust-domain
+                key: TRUST_DOMAIN
     - args:
         - traces
         - --otlp-endpoint
         - client-collector:4317
         - --traces
         - "1"
-        - --otlp-insecure
+        - --ca-cert
+        - /opt/client-certs/svid_bundle.pem
+        - --client-cert
+        - /opt/client-certs/svid.pem
+        - --client-key
+        - /opt/client-certs/svid.key
+        - --mtls
+        - --telemetry-attributes
+        - peer.spiffe_id="spiffe://$(TRUST_DOMAIN)/ns/$(POD_NAMESPACE)/sa/$(POD_SA_NAME)"
       image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
       imagePullPolicy: IfNotPresent
       name: traces
+      volumeMounts:
+        - mountPath: /opt/client-certs
+          name: client-certs
+      env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_SA_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: TRUST_DOMAIN
+          valueFrom:
+              configMapKeyRef:
+                name: spiffe-trust-domain
+                key: TRUST_DOMAIN
+  volumes:
+    - csi:
+        driver: csi.spiffe.io
+        readOnly: true
+      name: spiffe-workload-api
+    - emptyDir:
+        medium: Memory
+      name: client-certs
+    - configMap:
+        defaultMode: 420
+        name: spiffe-helper
+      name: spiffe-helper
+    - configMap:
+        defaultMode: 420
+        name: spiffe-trust-domain
+      name: spiffe-trust-domain
   dnsPolicy: ClusterFirst
   enableServiceLinks: true
   preemptionPolicy: PreemptLowerPriority

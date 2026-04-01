@@ -56,32 +56,59 @@ spec:
               reload_interval: 1m
             include_metadata: true 
     processors:
-      attributes/spiffe:
+      attributes/extract:
         actions:
-          - key: peer.spiffe_id
-            from_context: metadata.x-spiffe-id 
+          - key: tmp.next_spiffe_id
+            from_context: metadata.x-spiffe-id
             action: upsert
+      transform/concat:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(attributes["peer.spiffe_id"], Concat([attributes["peer.spiffe_id"], attributes["tmp.next_spiffe_id"]], ",")) where attributes["peer.spiffe_id"] != nil
+              - set(attributes["peer.spiffe_id"], attributes["tmp.next_spiffe_id"]) where attributes["peer.spiffe_id"] == nil
+        metric_statements:
+          - context: datapoint
+            statements:
+              - set(attributes["peer.spiffe_id"], Concat([attributes["peer.spiffe_id"], attributes["tmp.next_spiffe_id"]], ",")) where attributes["peer.spiffe_id"] != nil
+              - set(attributes["peer.spiffe_id"], attributes["tmp.next_spiffe_id"]) where attributes["peer.spiffe_id"] == nil
+        trace_statements:
+          - context: span
+            statements:
+              - set(attributes["peer.spiffe_id"], Concat([attributes["peer.spiffe_id"], attributes["tmp.next_spiffe_id"]], ",")) where attributes["peer.spiffe_id"] != nil
+              - set(attributes["peer.spiffe_id"], attributes["tmp.next_spiffe_id"]) where attributes["peer.spiffe_id"] == nil
+      attributes/cleanup:
+        actions:
+          - key: tmp.next_spiffe_id
+            action: delete
     service:
       pipelines:
         logs:
           exporters:
             - debug
           processors:
-            - attributes/spiffe
+            - attributes/extract
+            - transform/concat
+            - attributes/cleanup
           receivers:
             - otlp
         metrics:
           exporters:
             - debug
           processors:
-            - attributes/spiffe
+            - attributes/extract
+            - transform/concat
+            - attributes/cleanup
           receivers:
             - otlp
         traces:
           exporters:
             - debug
           processors:
-            - attributes/spiffe
+            - attributes/extract
+            - transform/concat
+            - attributes/cleanup
           receivers:
             - otlp
       telemetry:

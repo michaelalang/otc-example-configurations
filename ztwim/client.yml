@@ -56,24 +56,45 @@ spec:
         protocols:
           grpc:
             endpoint: 0.0.0.0:4317
+            tls:
+              ca_file: /opt/client-certs/svid_bundle.pem
+              cert_file: /opt/client-certs/svid.pem
+              client_ca_file: /opt/client-certs/svid_bundle.pem
+              key_file: /opt/client-certs/svid.key
+              max_version: '1.3'
+              min_version: '1.3'
+              reload_interval: 1m
+            include_metadata: true
+    processors:
+      attributes/spiffe:
+        actions:
+          - key: peer.spiffe_id
+            from_context: metadata.x-spiffe-id
+            action: upsert
     service:
       pipelines:
         logs:
           exporters:
             - otlp_http/ztwim
             - debug
+          processors:
+            - attributes/spiffe
           receivers:
             - otlp
         metrics:
           exporters:
             - otlp_http/ztwim
             - debug
+          processors:
+            - attributes/spiffe
           receivers:
             - otlp
         traces:
           exporters:
             - otlp_http/ztwim
             - debug
+          processors:
+            - attributes/spiffe
           receivers:
             - otlp
       telemetry:
