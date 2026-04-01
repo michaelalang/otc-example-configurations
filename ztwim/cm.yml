@@ -22,6 +22,13 @@ data:
     svid_bundle_file_name = "svid_bundle.pem"
     cert_file_mode = 0644
     key_file_mode = 0644
+    
+    jwt_svids = [
+      {
+      jwt_audience = "opentelemetry-collector"
+      jwt_svid_file_name = "svid_token"
+      }
+    ]
 kind: ConfigMap
 metadata:
   name: spiffe-helper

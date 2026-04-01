@@ -9,8 +9,6 @@ spec:
     - args:
         - -config
         - /etc/spiffe-helper/helper.conf
-        - -daemon-mode
-        - 'false'
       restartPolicy: Always
       startupProbe:
         exec:

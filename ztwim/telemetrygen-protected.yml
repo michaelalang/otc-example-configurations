@@ -123,6 +123,8 @@ spec:
         - --mtls
         - --telemetry-attributes
         - peer.spiffe_id="spiffe://$(TRUST_DOMAIN)/ns/$(POD_NAMESPACE)/sa/$(POD_SA_NAME)"
+        - --otlp-header
+        - Authorization="Bearer $(TOKEN)"
       image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen
       imagePullPolicy: IfNotPresent
       name: traces

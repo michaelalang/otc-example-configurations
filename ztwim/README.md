@@ -123,3 +123,92 @@ Attributes:
      -> peer.spiffe_id: Str(spiffe://example.com/ns/ztwim-otc/sa/client-collector)
 	{"resource": {"service.instance.id": "0dcdf779-475b-424b-a21e-2660c7a72b4e", "service.name": "otelcol", "service.version": "0.144.0"}, "otelcol.component.id": "debug", "otelcol.component.kind": "exporter", "otelcol.signal": "traces"}
 ```
+
+## the extra mile
+
+using ZeroTrustIdentityManager to authenticate telemetryGen to OpenTelemetryCollector through bearer token 
+
+* remote the telemetrygen instance by executing
+
+```
+oc -n ztwim-otc delete -f ztwim-otc/telemetrygen.yml
+```
+
+* rollout the client-collector by executing following command
+
+```
+oc -n ztwim-otc rollout restart deploy/client-collector
+```
+
+* create or re-create a secret called svid-token. This is mandatory as the telemetrygen cannot take env from reading a file.
+
+```
+oc -n ztwim-otc create secret generic svid-token \
+  --from-literal=token="$(oc -n ztwim-otc exec -ti deploy/client-collector -- cat /opt/client-certs/svid_token)" 
+```
+
+* if you need to re-create when the token expires for example
+
+```
+oc -n ztwim-otc create secret generic svid-token \
+  --from-literal=token="$(oc -n ztwim-otc exec -ti deploy/client-collector -- cat /opt/client-certs/svid_token)" \
+  --dry-run=client -o yaml | oc -n ztwim-otc replace -f-
+```
+
+* inject the `telemetrygen-protected` pod which sends three signals (log,metric,trace) but only trace is configured to use a bearer authentication
+
+```
+oc -n ztwim-otc create -f ztwim-otc/telemetrygen-protected.yml
+```
+
+* check the `server-collector` logs to see the trace arriving
+
+```
+oc -n ztwim-otc logs deploy/server-collector
+```
+
+* Example output
+
+```
+Resource SchemaURL: https://opentelemetry.io/schemas/1.38.0
+Resource attributes:
+     -> service.name: Str(telemetrygen)
+ScopeSpans #0
+ScopeSpans SchemaURL: 
+InstrumentationScope telemetrygen 
+Span #0
+    Trace ID       : 2b4256bd32dc5f3c7e7b9bf52446567d
+    Parent ID      : 84ceffbb396e7fe9
+    ID             : 1ae71df3dc82c66c
+    Name           : okey-dokey-0
+    Kind           : Server
+    Start time     : 2026-04-01 11:58:56.22429783 +0000 UTC
+    End time       : 2026-04-01 11:58:56.22442083 +0000 UTC
+    Status code    : Unset
+    Status message : 
+    DroppedAttributesCount: 0
+    DroppedEventsCount: 0
+    DroppedLinksCount: 0
+Attributes:
+     -> network.peer.address: Str(1.2.3.4)
+     -> peer.service: Str(telemetrygen-client)
+     -> peer.spiffe_id: Str(spiffe://example.com/ns/ztwim-otc/sa/default,spiffe://example.com/ns/ztwim-otc/sa/client-collector)
+Span #1
+    Trace ID       : 2b4256bd32dc5f3c7e7b9bf52446567d
+    Parent ID      : 
+    ID             : 84ceffbb396e7fe9
+    Name           : lets-go
+    Kind           : Client
+    Start time     : 2026-04-01 11:58:56.22429783 +0000 UTC
+    End time       : 2026-04-01 11:58:56.22442083 +0000 UTC
+    Status code    : Unset
+    Status message : 
+    DroppedAttributesCount: 0
+    DroppedEventsCount: 0
+    DroppedLinksCount: 0
+Attributes:
+     -> network.peer.address: Str(1.2.3.4)
+     -> peer.service: Str(telemetrygen-server)
+     -> peer.spiffe_id: Str(spiffe://example.com/ns/ztwim-otc/sa/default,spiffe://example.com/ns/ztwim-otc/sa/client-collector)
+	{"resource": {"service.instance.id": "1d773198-907e-400e-881b-7bcbef3747bb", "service.name": "otelcol", "service.version": "0.144.0"}, "otelcol.component.id": "debug", "otelcol.component.kind": "exporter", "otelcol.signal": "traces"}
+```
