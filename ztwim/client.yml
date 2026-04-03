@@ -46,7 +46,7 @@ spec:
         sampling_thereafter: 200
         verbosity: detailed
       otlp_http/ztwim:
-        endpoint: https://server-collector:4317
+        endpoint: https://server-collector:4318
         retry_on_failure:
           enabled: true
         tls:
