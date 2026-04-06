@@ -90,6 +90,11 @@ spec:
           - key: peer.spiffe_id
             from_context: metadata.x-spiffe-id
             action: upsert
+      resource/svid:
+        attributes:
+          - key: subject
+            action: upsert
+            from_context: auth.claims.sub
     service:
       extensions:
         - oidc
@@ -100,6 +105,7 @@ spec:
             - debug
           processors:
             - attributes/spiffe
+            - resource/svid
           receivers:
             - otlp
             - otlp/protected
@@ -109,6 +115,7 @@ spec:
             - debug
           processors:
             - attributes/spiffe
+            - resource/svid
           receivers:
             - otlp
             - otlp/protected
@@ -118,6 +125,7 @@ spec:
             - debug
           processors:
             - attributes/spiffe
+            - resource/svid
           receivers:
             - otlp
             - otlp/protected
