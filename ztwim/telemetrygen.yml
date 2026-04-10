@@ -143,11 +143,6 @@ spec:
               configMapKeyRef:
                 name: spiffe-trust-domain
                 key: TRUST_DOMAIN
-        - name: TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: svid-token
-              key: token
   volumes:
     - csi:
         driver: csi.spiffe.io
