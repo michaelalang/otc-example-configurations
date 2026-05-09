@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: splunk-hec
+    app.kubernetes.io/component: splunk-hec
+  name: splunk-hec
+  namespace: openshift-logging
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: splunk-hec
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        openshift.io/required-scc: anyuid
+      creationTimestamp: null
+      labels:
+        app: splunk-hec
+    spec:
+      containers:
+        - env:
+            - name: SPLUNK_GENERAL_TERMS
+              value: --accept-sgt-current-at-splunk-com
+            - name: SPLUNK_START_ARGS
+              value: --accept-license
+            - name: SPLUNK_PASSWORD
+              value: changeme
+            - name: SPLUNK_HEC_TOKEN
+              value: 11111111-2222-3333-4444-555555555555
+            - name: SPLUNK_HEC_PORT
+              value: '8088'
+          image: docker.io/splunk/splunk:latest
+          imagePullPolicy: IfNotPresent
+          name: splunk-hec
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+            - containerPort: 8088
+              protocol: TCP
+            - containerPort: 8089
+              protocol: TCP
+          resources:
+            limits:
+              cpu: '2'
+              memory: 10Gi
+            requests:
+              cpu: 10m
+              memory: 256Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /opt/container_artifact
+              name: splunk
+            - mountPath: /.ansible
+              name: ansible
+            - mountPath: /opt/splunk/var
+              name: spool
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsGroup: 0
+        runAsUser: 0
+      serviceAccount: splunk-hec
+      serviceAccountName: splunk-hec
+      terminationGracePeriodSeconds: 3
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: consumer
+            optional: true
+          name: consumer
+        - emptyDir: {}
+          name: splunk
+        - emptyDir: {}
+          name: ansible
+        - emptyDir: {}
+          name: spool

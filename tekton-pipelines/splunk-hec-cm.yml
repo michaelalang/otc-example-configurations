@@ -1,0 +1,44 @@
+apiVersion: v1
+data:
+  config.yaml: |
+    exporters:
+      debug:
+        sampling_initial: 5
+        sampling_thereafter: 200
+        verbosity: detailed
+      splunk_hec:
+        token: 11111111-2222-3333-4444-555555555555
+        endpoint: https://splunk-hec:8088/services/collector
+        tls:
+          insecure_skip_verify: true
+        splunk_app_name: Tekton
+        splunk_app_version: v0.0.1
+        heartbeat:
+          interval: 30s
+        telemetry:
+          enabled: false
+          override_metrics_names:
+            otelcol_exporter_splunkhec_heartbeats_sent: app_heartbeats_success_total
+            otelcol_exporter_splunkhec_heartbeats_failed: app_heartbeats_failed_total
+          extra_attributes:
+            dataset_name: SplunkCloudBeaverStack
+            custom_key: custom_value
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 127.0.0.1:14317
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - splunk_hec
+          receivers:
+            - otlp
+      telemetry:
+        metrics:
+          level: none
+kind: ConfigMap
+metadata:
+  name: splunkhec
+  namespace: openshift-logging

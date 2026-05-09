@@ -1,0 +1,54 @@
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  result:
+    disabled: false
+    is_external_db: false
+    options:
+      deployments:
+        tekton-results-api:
+          metadata:
+            creationTimestamp: null
+          spec:
+            selector: null
+            strategy: {}
+            template:
+              metadata:
+                creationTimestamp: null
+              spec:
+                containers:
+                  - env:
+                      - name: LOGGING_PLUGIN_API_URL
+                        value: https://splunk-hec.openshift-logging.svc.cluster.local:8089/
+                      - name: LOGGING_PLUGIN_QUERY_PARAMS
+                        value: index=main
+                      - name: SPLUNK_SEARCH_TOKEN
+                        value: <read-token-from-splunk-hec>
+                      - name: LOGGING_PLUGIN_TLS_VERIFICATION_DISABLE
+                        value: 'true'
+                      #- name: LOGGING_PLUGIN_CA_CERT
+                      #  value: "/etc/custom/certs/ca.crt"
+                      - name: LOGS_API
+                        value: 'true'
+                      - name: LOGS_TYPE
+                        value: Splunk
+                      - name: SQL_LOG_LEVEL
+                        value: debug
+                    #volumeMounts:
+                    #- name: customcerts
+                    #  mountPath: /etc/custom/certs/ca.crt
+                    #  subPath: ca.crt
+                    name: api
+                    resources: {}
+                #volumes:
+                #- configMap:
+                #    name: customcertsca
+                #  name: customcerts
+          status: {}
+    performance:
+      disable-ha: false
+    route_enabled: true
+    route_tls_termination: edge
+---

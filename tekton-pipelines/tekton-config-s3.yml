@@ -1,0 +1,133 @@
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  result:
+    disabled: false
+    is_external_db: false
+    options:
+      deployments:
+        tekton-results-api:
+          metadata:
+            creationTimestamp: null
+          spec:
+            selector: null
+            strategy: {}
+            template:
+              metadata:
+                creationTimestamp: null
+              spec:
+                containers:
+                  - env:
+                      - name: LOGS_API
+                        value: 'true'
+                      - name: LOGS_TYPE
+                        value: S3
+                      - name: S3_BUCKET_NAME
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_BUCKET_NAME
+                            name: tektons3
+                      - name: S3_ENDPOINT
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_ENDPOINT
+                            name: tektons3
+                      - name: S3_HOSTNAME_IMMUTABLE
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_HOSTNAME_IMMUTABLE
+                            name: tektons3
+                      - name: S3_REGION
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_REGION
+                            name: tektons3
+                      - name: S3_ACCESS_KEY_ID
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_ACCESS_KEY_ID
+                            name: tektons3
+                      - name: S3_SECRET_ACCESS_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_SECRET_ACCESS_KEY
+                            name: tektons3
+                      - name: S3_MULTI_PART_SIZE
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_MULTI_PART_SIZE
+                            name: tektons3
+                      - name: LOG_LEVEL
+                        value: debug
+                    name: api
+                    resources: {}
+          status: {}
+        tekton-results-watcher:
+          metadata:
+            creationTimestamp: null
+          spec:
+            selector: null
+            strategy: {}
+            template:
+              metadata:
+                creationTimestamp: null
+              spec:
+                containers:
+                  - args:
+                      - -api_addr
+                      - $(TEKTON_RESULTS_API_SERVICE)
+                      - -auth_mode
+                      - $(AUTH_MODE)
+                      - -logs_api=true
+                    env:
+                      - name: LOGS_API
+                        value: 'true'
+                      - name: LOGS_TYPE
+                        value: S3
+                      - name: S3_BUCKET_NAME
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_BUCKET_NAME
+                            name: tektons3
+                      - name: S3_ENDPOINT
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_ENDPOINT
+                            name: tektons3
+                      - name: S3_HOSTNAME_IMMUTABLE
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_HOSTNAME_IMMUTABLE
+                            name: tektons3
+                      - name: S3_REGION
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_REGION
+                            name: tektons3
+                      - name: S3_ACCESS_KEY_ID
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_ACCESS_KEY_ID
+                            name: tektons3
+                      - name: S3_SECRET_ACCESS_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_SECRET_ACCESS_KEY
+                            name: tektons3
+                      - name: S3_MULTI_PART_SIZE
+                        valueFrom:
+                          secretKeyRef:
+                            key: S3_MULTI_PART_SIZE
+                            name: tektons3
+                      - name: LOG_LEVEL
+                        value: debug
+                    name: watcher
+                    resources: {}
+          status: {}
+    performance:
+      disable-ha: false
+    route_enabled: true
+    route_tls_termination: edge
+---

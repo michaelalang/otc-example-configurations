@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton
+  namespace: openshift-logging
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: splunk-hec
+  namespace: openshift-logging
